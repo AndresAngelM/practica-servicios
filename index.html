@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Servicios</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.21/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-light">
+
+    <div class="container mt-4">
+        <h1 class="text-center">Registro de Servicios</h1>
+
+        <!-- FORMULARIO -->
+        <div class="card p-4 shadow">
+            <form id="miFormulario">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="numeroServicio" class="form-label">Número de Servicio:</label>
+                        <input type="text" class="form-control" id="numeroServicio" minlength="7" maxlength="11" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="instantePrevisto" class="form-label">Instante Previsto:</label>
+                        <input type="time" class="form-control" id="instantePrevisto" required>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label for="paciente" class="form-label">Paciente:</label>
+                        <input type="text" class="form-control" id="paciente" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="motivoLlamado" class="form-label">Motivo del Llamado:</label>
+                        <input type="text" class="form-control" id="motivoLlamado" required>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label for="origen" class="form-label">Origen:</label>
+                        <input type="text" class="form-control" id="origen" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="localidadOrigen" class="form-label">Localidad Origen:</label>
+                        <input type="text" class="form-control" id="localidadOrigen" required>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label for="destino" class="form-label">Destino:</label>
+                        <input type="text" class="form-control" id="destino" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="localidadDestino" class="form-label">Localidad Destino:</label>
+                        <input type="text" class="form-control" id="localidadDestino" required>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label for="horasEspera" class="form-label">Minutos de espera:</label>
+                        <input type="number" class="form-control" id="horasEspera" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-3 w-100">Enviar</button>
+            </form>
+        </div>
+
+        <!-- BOTÓN PARA VER LOS REGISTROS -->
+        <h2 class="text-center mt-5">Registros ingresados</h2>
+        <button id="verRegistrosBtn" class="btn btn-secondary w-100 mb-3">Ver Registros</button>
+
+        <!-- BOTÓN PARA BORRAR EL ÚLTIMO REGISTRO -->
+        <button id="borrarUltimoBtn" class="btn btn-warning w-100 mb-3" style="display: none;">Borrar Último Registro</button>
+
+        <!-- BOTÓN PARA GENERAR PDF -->
+        <button id="descargarPDF" class="btn btn-success w-100 mb-3" style="display: none;">Descargar PDF</button>
+
+        <!-- TABLA PARA MOSTRAR LOS DATOS -->
+        <div class="table-responsive" id="tablaRegistros" style="display: none;">
+            <table class="table table-striped table-bordered mt-3" id="tablaDatos">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Número de Servicio</th>
+                        <th>Instante Previsto</th>
+                        <th>Paciente</th>
+                        <th>Motivo del Llamado</th>
+                        <th>Origen</th>
+                        <th>Localidad Origen</th>
+                        <th>Destino</th>
+                        <th>Localidad Destino</th>
+                        <th>Minutos de espera</th>
+                    </tr>
+                </thead>
+                <tbody id="registroDatos">
+                    <!-- Aquí se agregarán los datos -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- BOTÓN PARA CERRAR SESIÓN (MOVIDO AL FINAL) -->
+        <button id="cerrarSesionBtn" class="btn btn-danger w-100 mb-3">Cerrar sesión</button>
+
+    </div>
+
+    <!-- JAVASCRIPT PARA GUARDAR LOS DATOS EN LA TABLA Y MOSTRAR/OCULTAR -->
+    <script>
+        // Verificar si el usuario está logueado
+        if (localStorage.getItem("loggedIn") !== "true") {
+            // Si no está logueado, redirigir al login
+            window.location.href = "login.html";
+        }
+
+        // Manejar el botón de Cerrar sesión
+        document.getElementById("cerrarSesionBtn").addEventListener("click", function() {
+            // Mostrar una ventana de confirmación antes de cerrar sesión
+            const confirmarCerrarSesion = confirm("¿Está seguro de que desea cerrar sesión?");
+            
+            if (confirmarCerrarSesion) {
+                // Si el usuario confirma, eliminar la sesión y los registros
+                localStorage.removeItem("loggedIn");
+                localStorage.removeItem("registros");
+
+                // Redirigir al login
+                window.location.href = "login.html";
+            }
+        });
+
+        // Cargar los registros almacenados en el localStorage
+        window.onload = function() {
+            let registrosGuardados = JSON.parse(localStorage.getItem("registros"));
+            if (registrosGuardados) {
+                registrosGuardados.forEach(function(registro) {
+                    agregarRegistroATabla(registro);
+                });
+            }
+
+            // Mostrar/ocultar el botón de borrar dependiendo si hay registros
+            if (registrosGuardados && registrosGuardados.length > 0) {
+                document.getElementById("borrarUltimoBtn").style.display = "inline-block";
+            } else {
+                document.getElementById("borrarUltimoBtn").style.display = "none";
+            }
+        };
+
+        document.getElementById("miFormulario").addEventListener("submit", function(event) {
+            event.preventDefault(); // Evita que la página se recargue
+
+            // Obtener los datos del formulario
+            let numeroServicio = document.getElementById("numeroServicio").value;
+            let instantePrevisto = document.getElementById("instantePrevisto").value;
+            let paciente = document.getElementById("paciente").value;
+            let motivoLlamado = document.getElementById("motivoLlamado").value;
+            let origen = document.getElementById("origen").value;
+            let localidadOrigen = document.getElementById("localidadOrigen").value;
+            let destino = document.getElementById("destino").value;
+            let localidadDestino = document.getElementById("localidadDestino").value;
+            let horasEspera = document.getElementById("horasEspera").value;
+
+            // Guardar el nuevo registro en el localStorage
+            let registros = JSON.parse(localStorage.getItem("registros")) || [];
+            registros.push({
+                numeroServicio,
+                instantePrevisto,
+                paciente,
+                motivoLlamado,
+                origen,
+                localidadOrigen,
+                destino,
+                localidadDestino,
+                horasEspera
+            });
+            localStorage.setItem("registros", JSON.stringify(registros));
+
+            // Agregar el registro a la tabla
+            agregarRegistroATabla({
+                numeroServicio,
+                instantePrevisto,
+                paciente,
+                motivoLlamado,
+                origen,
+                localidadOrigen,
+                destino,
+                localidadDestino,
+                horasEspera
+            });
+
+            // Mostrar el botón de borrar último registro
+            document.getElementById("borrarUltimoBtn").style.display = "inline-block";
+
+            // Limpiar los campos del formulario
+            document.getElementById("miFormulario").reset();
+        });
+
+        // Función para agregar el registro a la tabla
+        function agregarRegistroATabla(registro) {
+            let tabla = document.getElementById("registroDatos");
+
+            let fila = tabla.insertRow();
+            fila.insertCell(0).textContent = registro.numeroServicio;
+            fila.insertCell(1).textContent = registro.instantePrevisto;
+            fila.insertCell(2).textContent = registro.paciente;
+            fila.insertCell(3).textContent = registro.motivoLlamado;
+            fila.insertCell(4).textContent = registro.origen;
+            fila.insertCell(5).textContent = registro.localidadOrigen;
+            fila.insertCell(6).textContent = registro.destino;
+            fila.insertCell(7).textContent = registro.localidadDestino;
+            fila.insertCell(8).textContent = registro.horasEspera;
+        }
+
+        // Función para mostrar los registros
+        document.getElementById("verRegistrosBtn").addEventListener("click", function() {
+            document.getElementById("tablaRegistros").style.display = "block";
+            document.getElementById("descargarPDF").style.display = "block";
+        });
+
+        // Función para borrar el último registro
+        document.getElementById("borrarUltimoBtn").addEventListener("click", function() {
+            let registros = JSON.parse(localStorage.getItem("registros"));
+            registros.pop();
+            localStorage.setItem("registros", JSON.stringify(registros));
+
+            // Recargar la tabla
+            document.getElementById("registroDatos").innerHTML = "";
+            registros.forEach(function(registro) {
+                agregarRegistroATabla(registro);
+            });
+
+            // Ocultar el botón si no hay más registros
+            if (registros.length === 0) {
+                document.getElementById("borrarUltimoBtn").style.display = "none";
+            }
+        });
+
+        // Función para generar y descargar el PDF
+        document.getElementById("descargarPDF").addEventListener("click", function() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Obtener los datos de chofer, camillero y fecha
+            let chofer = localStorage.getItem("chofer");
+            let camillero = localStorage.getItem("camillero");
+            let fecha = localStorage.getItem("fecha");
+
+            // Obtener los registros
+            let registros = JSON.parse(localStorage.getItem("registros")) || [];
+            let rows = registros.map(registro => [
+                registro.numeroServicio, 
+                registro.instantePrevisto, 
+                registro.paciente, 
+                registro.motivoLlamado,
+                registro.origen,
+                registro.localidadOrigen,
+                registro.destino,
+                registro.localidadDestino,
+                registro.horasEspera
+            ]);
+
+            // Incluir los datos del chofer, camillero y fecha en el PDF
+            doc.text(`Chofer: ${chofer}`, 10, 10);
+            doc.text(`Camillero: ${camillero}`, 10, 20);
+            doc.text(`Fecha: ${fecha}`, 10, 30);
+
+            // Crear la tabla con los registros
+            doc.autoTable({
+                head: [['Número de Servicio', 'Instante Previsto', 'Paciente', 'Motivo del Llamado', 'Origen', 'Localidad Origen', 'Destino', 'Localidad Destino', 'Minutos de espera']],
+                body: rows,
+                startY: 40
+            });
+
+            // Descargar el PDF
+            doc.save('registros_servicios.pdf');
+        });
+    </script>
+
+</body>
+</html>
